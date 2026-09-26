@@ -1,0 +1,60 @@
+{{define "consent"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authorize {{.ClientName}}</title>
+<style>
+:root { color-scheme: light dark; --bg:#fff; --fg:#1a1a1a; --muted:#666; --line:#e2e2e2; --accent:#2563eb; --danger:#b91c1c; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141416; --fg:#ededed; --muted:#a1a1a1; --line:#2c2c30; --accent:#60a5fa; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
+main { width:100%; max-width:26rem; border:1px solid var(--line); border-radius:12px; padding:28px; }
+h1 { font-size:1.25rem; margin:0 0 4px; }
+.sub { color:var(--muted); margin:0 0 20px; font-size:.95rem; }
+ul { list-style:none; margin:0 0 20px; padding:0; border-top:1px solid var(--line); }
+li { padding:12px 0; border-bottom:1px solid var(--line); }
+.scope { font-weight:600; font-size:.9rem; }
+.desc { color:var(--muted); font-size:.875rem; }
+.actions { display:flex; gap:10px; }
+button { flex:1; padding:11px 14px; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer; border:1px solid var(--line); }
+.approve { background:var(--accent); border-color:var(--accent); color:#fff; }
+.deny { background:transparent; color:var(--fg); }
+.note { margin-top:18px; color:var(--muted); font-size:.8rem; }
+.warn { color:var(--danger); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Authorize {{.ClientName}}</h1>
+  <p class="sub">{{.ClientName}} wants to act on your behalf.</p>
+
+  {{if .Scopes}}
+  <ul>
+    {{range .Scopes}}
+    <li>
+      <div class="scope">{{.Name}}</div>
+      {{if .Description}}<div class="desc">{{.Description}}</div>{{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="sub">It is not requesting any specific permissions.</p>
+  {{end}}
+
+  <form method="post" action="{{.FormAction}}">
+    {{if .CSRFToken}}<input type="hidden" name="_token" value="{{.CSRFToken}}">{{end}}
+    <input type="hidden" name="_oauth_nonce" value="{{.Nonce}}">
+    <div class="actions">
+      <button type="submit" name="decision" value="deny" class="deny">Deny</button>
+      <button type="submit" name="decision" value="approve" class="approve">Approve</button>
+    </div>
+  </form>
+
+  <p class="note">
+    You will be returned to <strong>{{.RedirectHost}}</strong>.
+    {{if .Untrusted}}<span class="warn">This application is not published by us.</span>{{end}}
+  </p>
+</main>
+</body>
+</html>{{end}}

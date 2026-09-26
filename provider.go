@@ -21,6 +21,27 @@ type Provider struct {
 	// builds a SQL store over the application's database connection.
 	Store Store
 
+	// ConsentView replaces the built-in consent screen. The default is one
+	// self-contained HTML document with no external assets, which is what
+	// lets it work whether the project renders with Go templates, Templ or
+	// Inertia. Replace it to match the application's own design — an Inertia
+	// project must, since its pages are components in a JavaScript bundle
+	// this package knows nothing about.
+	ConsentView ConsentView
+
+	// DeviceView replaces the device verification screens.
+	DeviceView DeviceView
+
+	// ResourceOwner identifies who is granting consent, overriding the
+	// default that reads the auth package's user. Return false to send the
+	// visitor to the login route.
+	ResourceOwner func(c app.Context) (string, bool)
+
+	// UserResolver loads the application's user for a token subject, so a
+	// handler written against auth.AuthUser receives a real user rather than
+	// the token's principal. Optional.
+	UserResolver UserResolver
+
 	mu       sync.RWMutex
 	resolved *Config
 	store    Store

@@ -8,10 +8,11 @@ This is the server side. Signing in to *someone else's* provider — "log in
 with GitHub" — is the client side and is a different, much smaller thing this
 package does not do.
 
-> **Status: incomplete.** The store, schema, keys and all five grants are
-> implemented and tested. The HTTP endpoints, the consent screen and the
-> `oauth:*` commands are not written yet, so this cannot yet be mounted in an
-> application. See [What is missing](#what-is-missing).
+> **Status: incomplete.** The store, schema, keys, all five grants, every HTTP
+> endpoint and the consent screen are implemented and tested. The `oauth:*`
+> commands are not written yet — including `oauth:keys`, so there is no
+> supported way to generate the signing keys a deployment needs. See
+> [What is missing](#what-is-missing).
 
 ## What it does
 
@@ -150,15 +151,66 @@ closed, and a JWKS carrying no private material.
 attacks** — that is the risk taken in hand-rolling a protocol implementation
 rather than using an audited one such as `ory/fosite`.
 
+## Endpoints
+
+| Endpoint | Mounted as | Why |
+|---|---|---|
+| `{prefix}/token` | raw handler | no CSRF, no session, RFC 6749 error bodies |
+| `{prefix}/device/code` | raw handler | machine to machine |
+| `{prefix}/revoke` | raw handler | RFC 7009 |
+| `{prefix}/introspect` | raw handler | RFC 7662; no CORS, confidential clients only |
+| `/.well-known/jwks.json` | raw handler, at the root | public and cacheable, with a strong ETag |
+| `/.well-known/oauth-authorization-server` | raw handler, at the root | RFC 8414 requires the root |
+| `{prefix}/authorize` | typed route | browser flow: CSRF, session, consent |
+| `{prefix}/device` | typed route | the user-code screen |
+
+The split is the design rather than a workaround. A raw handler never enters
+the framework's `Handler` pipeline, so CSRF verification never sees the token
+endpoint — correct, and correct *by construction* rather than because a
+project remembered to add an exclusion pattern. A protocol endpoint whose
+correctness depends on someone editing `bootstrap/middleware.go` is a
+foot-gun.
+
+The cost, stated rather than hidden: a raw handler is not counted by the
+framework's in-flight request tracking, so a graceful shutdown will not wait
+for a token exchange. Those take milliseconds.
+
+The human-facing routes do want the pipeline, being first-party, cookie
+authenticated and browser driven.
+
+## The consent screen
+
+The default is one self-contained HTML document: inline styles, no
+JavaScript, no external assets. Self-containment is what makes it work
+whatever the project's frontend, since a Templ or Inertia application has no
+Go template cache to render through and no page component for this route.
+
+Override it with `ConsentView` and `DeviceView`. An Inertia project must,
+because its pages live in a JavaScript bundle this package knows nothing
+about.
+
+The decision is rebuilt from the session, not from the posted body — a page
+that displayed `read` cannot post back `read write admin`. The form carries
+this package's own single-use nonce alongside the framework's CSRF token,
+because the REST preset installs no CSRF middleware at all.
+
+## Protecting your API
+
+```go
+r.Group("/api").UseBefore(oauth2Provider.Protect("orders:read"))
+```
+
+`Protect` sets both the `*Principal` and auth's own user key, so a handler
+already written against `auth.AuthUser` keeps working against a bearer token
+unchanged — and `auth` never learns this package exists, which keeps the
+dependency pointing one way. Supply `UserResolver` to have it hand over a
+real user row instead of the principal.
+
 ## What is missing
 
-- The HTTP endpoints: `/authorize`, `/token`, `/device/code`, `/device`,
-  `/revoke`, `/introspect`, and the two `/.well-known/` documents. The
-  server-side logic behind each exists and is tested; the routing does not.
-- The consent screen.
-- `oauth2.Protect` middleware and the bearer-token bridge into `auth`.
 - The `oauth:install`, `oauth:client`, `oauth:keys` and `oauth:purge`
-  commands — including the one that generates the signing keys.
+  commands — including the one that generates the signing keys, so a
+  deployment currently has no supported way to create them.
 - Documentation on lemmego.org.
 
 ## Licence
