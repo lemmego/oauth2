@@ -225,7 +225,7 @@ Then:
 
 ```bash
 lemmego run oauth:install                        # signing keys, and what to do next
-lemmego run publish --tags=config,migrations     # config and the migration
+lemmego run publish --tags=oauth2-config,oauth2-migrations     # config and the migration
 go build ./...                                   # the migration must be compiled in
 lemmego run migrate up
 lemmego run oauth:client --name "My App" --redirect-uri https://app.example.com/cb

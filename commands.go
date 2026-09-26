@@ -273,22 +273,7 @@ func (p *Provider) installCommand(a app.App) *cobra.Command {
 			// The migration and the config file are published rather than
 			// written here, so there is one way to get them and `publish`
 			// keeps behaving the way people expect.
-			cmd.Printf(`
-Next:
-
-  1. lemmego run publish --tags=config,migrations
-  2. go build ./...          # the published migration must be compiled in
-  3. lemmego run migrate up
-  4. lemmego run oauth:client --personal --name "%s"
-
-Step 2 is not optional and is the easy one to miss: the migration was
-written by a running binary that does not contain it yet.
-
-Then register the provider in bootstrap/providers.go, below the database
-connector:
-
-  &oauth2.Provider{},
-`, "Personal Access Client")
+			cmd.Print(installInstructions)
 			return nil
 		},
 	}
@@ -405,3 +390,23 @@ func gitignoreCovers(content, path string) bool {
 	}
 	return false
 }
+
+// installInstructions is a constant so the tags it names are the tags that
+// exist: they are interpolated from the same constants AddPublishables uses,
+// rather than typed out a second time where they could drift.
+var installInstructions = fmt.Sprintf(`
+Next:
+
+  1. lemmego run publish --tags=%s,%s
+  2. go build ./...          # the published migration must be compiled in
+  3. lemmego run migrate up
+  4. lemmego run oauth:client --personal --name "Personal Access Client"
+
+Step 2 is not optional and is the easy one to miss: the migration was
+written by a running binary that does not contain it yet.
+
+Then register the provider in bootstrap/providers.go, below the database
+connector:
+
+  &oauth2.Provider{},
+`, TagConfig, TagMigrations)

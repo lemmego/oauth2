@@ -7,10 +7,16 @@ import (
 	"github.com/lemmego/api/utils"
 )
 
-// Publish tags. They are what `lemmego publish --tags` selects on.
+// Publish tags, namespaced by the module.
+//
+// `lemmego publish --tags` selects on these, and the selection is real — so a
+// bare "migrations" would sweep in every other package that ever publishes
+// one, and "config" already means something to queue and cache. Prefixing
+// makes `--tags=oauth2-migrations` say what it does, which is the convention
+// Passport uses too.
 const (
-	TagConfig     = "config"
-	TagMigrations = "migrations"
+	TagConfig     = "oauth2-config"
+	TagMigrations = "oauth2-migrations"
 )
 
 // AddPublishables offers this package's configuration and migration to the
