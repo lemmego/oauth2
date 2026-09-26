@@ -67,6 +67,12 @@ func (p *Provider) AddRoutes() app.RouteCallback {
 		group.Post("/authorize", p.decideConsent)
 		group.Get("/device", p.showDeviceForm)
 		group.Post("/device", p.submitDeviceCode)
+
+		if cfg.ManagementRoutes {
+			group.Get("/clients", p.showClients)
+			group.Post("/clients", p.createClient)
+			group.Post("/clients/revoke", p.revokeClient)
+		}
 	}
 }
 

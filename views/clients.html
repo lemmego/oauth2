@@ -1,0 +1,130 @@
+{{define "clients"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OAuth Clients</title>
+<style>
+:root { color-scheme: light dark; --bg:#fff; --fg:#1a1a1a; --muted:#666; --line:#e2e2e2; --accent:#2563eb; --danger:#b91c1c; --ok:#047857; --soft:#f6f6f7; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141416; --fg:#ededed; --muted:#a1a1a1; --line:#2c2c30; --accent:#60a5fa; --danger:#f87171; --ok:#34d399; --soft:#1b1b1f; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+main { max-width:52rem; margin:0 auto; padding:40px 20px 64px; }
+h1 { font-size:1.4rem; margin:0 0 4px; }
+h2 { font-size:1.05rem; margin:36px 0 12px; }
+.sub { color:var(--muted); margin:0 0 28px; }
+.secret { border:1px solid var(--ok); border-radius:10px; padding:16px 18px; margin-bottom:28px; background:var(--soft); }
+.secret h3 { margin:0 0 6px; font-size:.95rem; color:var(--ok); }
+.secret p { margin:0 0 10px; font-size:.875rem; color:var(--muted); }
+code { font:600 .875rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-all; }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:.875rem; }
+.kv dt { color:var(--muted); }
+.kv dd { margin:0; }
+table { width:100%; border-collapse:collapse; font-size:.9rem; }
+th { text-align:left; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:0 10px 8px 0; font-weight:600; }
+td { padding:12px 10px 12px 0; border-top:1px solid var(--line); vertical-align:top; }
+td:last-child, th:last-child { text-align:right; padding-right:0; }
+.name { font-weight:600; }
+.meta { color:var(--muted); font-size:.8rem; }
+.pill { display:inline-block; font-size:.7rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-right:4px; }
+.pill.revoked { color:var(--danger); border-color:var(--danger); }
+form.inline { display:inline; }
+button { font:inherit; font-size:.85rem; padding:6px 12px; border-radius:7px; border:1px solid var(--line); background:transparent; color:var(--fg); cursor:pointer; }
+button.danger { color:var(--danger); border-color:var(--danger); }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; padding:10px 16px; }
+.new { border:1px solid var(--line); border-radius:10px; padding:20px; margin-top:12px; }
+label { display:block; font-size:.8rem; font-weight:600; margin-bottom:5px; }
+input[type=text], select { width:100%; padding:9px 11px; font:inherit; font-size:.9rem; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--fg); margin-bottom:14px; }
+.hint { color:var(--muted); font-size:.78rem; margin:-10px 0 14px; }
+.err { color:var(--danger); font-size:.875rem; margin:0 0 16px; }
+.empty { color:var(--muted); padding:22px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>OAuth Clients</h1>
+  <p class="sub">Applications you have authorized to use this API on your behalf.</p>
+
+  {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+
+  {{if .NewSecret}}
+  <div class="secret">
+    <h3>Client registered</h3>
+    <p>This is the only time the secret can be shown. It is stored hashed and cannot be recovered.</p>
+    <dl class="kv">
+      <dt>Client ID</dt><dd><code>{{.NewClientID}}</code></dd>
+      <dt>Secret</dt><dd><code>{{.NewSecret}}</code></dd>
+    </dl>
+  </div>
+  {{else if .NewClientID}}
+  <div class="secret">
+    <h3>Client registered</h3>
+    <p>This is a public client. It authenticates with its ID and PKCE, and has no secret.</p>
+    <dl class="kv">
+      <dt>Client ID</dt><dd><code>{{.NewClientID}}</code></dd>
+    </dl>
+  </div>
+  {{end}}
+
+  {{if .Clients}}
+  <table>
+    <thead><tr><th>Name</th><th>Grants</th><th></th></tr></thead>
+    <tbody>
+    {{range .Clients}}
+      <tr>
+        <td>
+          <div class="name">{{.Name}}</div>
+          <div class="meta"><code>{{.ID}}</code></div>
+          {{if .RedirectURIs}}<div class="meta">{{range .RedirectURIs}}{{.}}<br>{{end}}</div>{{end}}
+        </td>
+        <td>
+          {{range .GrantTypes}}<span class="pill">{{.}}</span>{{end}}
+          {{if .Public}}<span class="pill">public</span>{{end}}
+          {{if .Revoked}}<span class="pill revoked">revoked</span>{{end}}
+        </td>
+        <td>
+          {{if not .Revoked}}
+          <form class="inline" method="post" action="{{$.RevokeAction}}">
+            {{if $.CSRFToken}}<input type="hidden" name="_token" value="{{$.CSRFToken}}">{{end}}
+            <input type="hidden" name="_oauth_form" value="{{$.FormToken}}">
+            <input type="hidden" name="client_id" value="{{.ID}}">
+            <button type="submit" class="danger">Revoke</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">You have not registered any clients yet.</p>
+  {{end}}
+
+  <h2>Register a client</h2>
+  <div class="new">
+    <form method="post" action="{{.CreateAction}}">
+      {{if .CSRFToken}}<input type="hidden" name="_token" value="{{.CSRFToken}}">{{end}}
+      <input type="hidden" name="_oauth_form" value="{{.FormToken}}">
+
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" required maxlength="255" placeholder="My Application">
+      <p class="hint">Shown to users on the consent screen.</p>
+
+      <label for="redirect">Redirect URI</label>
+      <input type="text" id="redirect" name="redirect_uri" placeholder="https://example.com/callback">
+      <p class="hint">Matched exactly when an authorization is requested. Leave empty for a machine-to-machine client.</p>
+
+      <label for="kind">Type</label>
+      <select id="kind" name="kind">
+        <option value="confidential">Confidential — a server that can keep a secret</option>
+        <option value="public">Public — a browser or mobile app, no secret, PKCE required</option>
+        <option value="machine">Machine to machine — no user involved</option>
+        <option value="device">Device — for something without a browser</option>
+      </select>
+
+      <button type="submit" class="primary">Register</button>
+    </form>
+  </div>
+</main>
+</body>
+</html>{{end}}

@@ -32,6 +32,9 @@ type Provider struct {
 	// DeviceView replaces the device verification screens.
 	DeviceView DeviceView
 
+	// ClientsView replaces the client management page.
+	ClientsView ClientsView
+
 	// ResourceOwner identifies who is granting consent, overriding the
 	// default that reads the auth package's user. Return false to send the
 	// visitor to the login route.

@@ -2,6 +2,7 @@ package oauth2
 
 import (
 	"crypto/rsa"
+	"github.com/lemmego/api/app"
 	"net/url"
 	"sync"
 	"testing"
@@ -167,4 +168,30 @@ const testVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 func ctxOf(t *testing.T) Context {
 	t.Helper()
 	return t.Context()
+}
+
+// sessionContext is the little of app.Context the management forms touch: a
+// per-request bag and a session that outlives the request.
+type sessionContext struct {
+	app.Context
+	values  map[string]any
+	session map[string]any
+}
+
+func newSessionContext() *sessionContext {
+	return &sessionContext{values: map[string]any{}, session: map[string]any{}}
+}
+
+func (c *sessionContext) Set(key string, value any) { c.values[key] = value }
+func (c *sessionContext) Get(key string) any        { return c.values[key] }
+func (c *sessionContext) Session(key string) any    { return c.session[key] }
+func (c *sessionContext) PopSession(key string) any {
+	value := c.session[key]
+	delete(c.session, key)
+	return value
+}
+
+func (c *sessionContext) PutSession(key string, value any) app.SessionGetSetter {
+	c.session[key] = value
+	return nil
 }

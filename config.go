@@ -51,6 +51,12 @@ type Config struct {
 	SkipConsentForFirstParty bool
 	LoginRoute               string
 
+	// ManagementRoutes mounts the page where a signed-in user registers and
+	// revokes their own clients. It lists only their own, so it needs no
+	// administrator role — but an application that registers clients another
+	// way, or shows them in its own interface, can turn it off.
+	ManagementRoutes bool
+
 	// Scopes maps a scope to the description shown on the consent screen. A
 	// scope absent from here is rejected rather than silently dropped, which
 	// is what stops a client believing it has access it was never granted.
@@ -81,6 +87,7 @@ func DefaultConfig() *Config {
 		Revocation:               RevocationAlways,
 		SkipConsentForFirstParty: true,
 		LoginRoute:               "/login",
+		ManagementRoutes:         true,
 		Scopes:                   map[string]string{},
 		PruneAfterHours:          168,
 		TablePrefix:              "oauth_",
@@ -164,6 +171,7 @@ func (cfg *Config) apply(section config.M) error {
 	applyBool(section, "require_pkce", &cfg.RequirePKCE)
 	applyBool(section, "refresh_rotation", &cfg.RefreshRotation)
 	applyBool(section, "skip_consent_for_first_party", &cfg.SkipConsentForFirstParty)
+	applyBool(section, "management_routes", &cfg.ManagementRoutes)
 	applyInt(section, "prune_after_hours", &cfg.PruneAfterHours)
 
 	if keys, ok := section["keys"].(config.M); ok {

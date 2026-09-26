@@ -112,6 +112,25 @@ unchanged — and `auth` never learns this package exists, which keeps the
 dependency pointing one way. Supply `UserResolver` to have it hand over a
 real user row instead of the principal.
 
+## Managing clients
+
+A signed-in user manages their own clients at `{prefix}/clients` — a plain Go
+template page, no JavaScript, in the same style as the consent screen.
+
+It lists **their own** clients and nobody else's. That is what makes it safe
+without an administrator role: a page showing every client would leak the
+existence of every integration to whoever reached it. A client belonging to
+someone else is reported as "No such client" rather than "forbidden", so the
+page cannot be used to discover which client ids exist.
+
+Being a typed route rather than a raw handler, it inherits the framework's
+CSRF protection and session — and carries its own token as well, because the
+REST preset installs no CSRF middleware and a page that can register an OAuth
+client is not one to leave unprotected.
+
+Set `management_routes` to `false` to turn it off, or replace the page with
+`ClientsView`.
+
 ## The consent screen
 
 The default is one self-contained HTML document: inline styles, no

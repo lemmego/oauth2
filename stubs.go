@@ -68,6 +68,11 @@ func init() {
 		// signed in.
 		"login_route": config.MustEnv("OAUTH_LOGIN_ROUTE", "/login"),
 
+		// The page at {route_prefix}/clients where a signed-in user
+		// registers and revokes their own clients. It lists only their own,
+		// so it needs no administrator role.
+		"management_routes": config.MustEnv("OAUTH_MANAGEMENT_ROUTES", true),
+
 		// The scopes clients may request, and what to show on the consent
 		// screen for each. A scope that is not listed here is rejected
 		// rather than silently dropped.
