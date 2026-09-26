@@ -83,6 +83,8 @@ github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre
 github.com/go-sql-driver/mysql v1.9.3 h1:U/N249h2WzJ3Ukj8SowVFjdtZKfu9vlLZxjPXV1aweo=
 github.com/go-sql-driver/mysql v1.9.3/go.mod h1:qn46aNg1333BRMNU69Lq93t8du/dwxI64Gl8i5p1WMU=
 github.com/go-stack/stack v1.6.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/golang-jwt/jwt/v5 v5.3.1 h1:kYf81DTWFe7t+1VvL7eS+jKFVWaUnK9cB1qbwn63YCY=
+github.com/golang-jwt/jwt/v5 v5.3.1/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f h1:16RtHeWGkJMc80Etb8RPCcKevXGldr57+LOyZt8zOlg=
 github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f/go.mod h1:ijRvpgDJDI262hYq/IQVYgf8hd8IHUs93Ol0kvMBAx4=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -145,12 +147,12 @@ github.com/justinas/alice v1.2.0/go.mod h1:fN5HRH/reO/zrUflLfTN43t3vXvKzvZIENsNE
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/lemmego/api v0.1.37 h1:dD7crEKRti+DB+X7Xi6cv/BZm32HKWslCWFmcokxQDk=
-github.com/lemmego/api v0.1.37/go.mod h1:W/dO1orsrAI+YWE3XZuwZZyexYlzH2z3Bk/xSNqaEDY=
+github.com/lemmego/api v0.1.38 h1:4Llboha5dNQakaCCcCSiEKXwO0F3W6ZnZecao3tWO2M=
+github.com/lemmego/api v0.1.38/go.mod h1:W/dO1orsrAI+YWE3XZuwZZyexYlzH2z3Bk/xSNqaEDY=
 github.com/lemmego/fsys v0.1.0 h1:P4fpotnq62sOGHLiUwX0zWVz/X4HnNJY0XY+fQxNowE=
 github.com/lemmego/fsys v0.1.0/go.mod h1:0FnPMmhcUB48QaRQMNdee5HOQcbc+aqpQoG7UDd3X1M=
-github.com/lemmego/migration v0.1.19 h1:JgVSKY30iJGWyWfaKNUl54NlxJCsBw1GxPZKETI65VM=
-github.com/lemmego/migration v0.1.19/go.mod h1:5fvMhLGLgNU8AOtLgLZZ1TBEJaj/MtIjy3IQOXLeYZM=
+github.com/lemmego/migration v0.1.20 h1:2Osh2NrYQqIOovuR5sydFp0p6IILYDZF4Vw4A3c9yEs=
+github.com/lemmego/migration v0.1.20/go.mod h1:JNl9fUnUF9+tJ3hKGZftWoyaUrEh6rEn+jbOICpY8TY=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
 github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/magiconair/properties v1.7.4-0.20170902060319-8d7837e64d3c/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
