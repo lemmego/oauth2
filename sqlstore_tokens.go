@@ -215,3 +215,12 @@ func (s *SQLStore) Prune(ctx context.Context, before time.Time) (PruneResult, er
 	})
 	return result, err
 }
+
+// CreateRefreshToken satisfies RefreshWriter.
+func (s *SQLStore) CreateRefreshToken(ctx Context, token *RefreshToken) error {
+	_, err := s.db.ExecContext(ctx, s.q.insertRefresh,
+		token.ID, nullString(token.AccessTokenID), token.ClientID, nullString(token.UserID),
+		encodeScopes(token.Scopes), token.FamilyID, nullString(token.RotatedTo),
+		token.Revoked, utc(token.ExpiresAt), utc(token.CreatedAt))
+	return s.translateInsertErr(err)
+}

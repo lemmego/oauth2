@@ -133,14 +133,22 @@ func (s *Server) Verify(ctx Context, raw string) (*Principal, error) {
 			}
 			return key, nil
 		},
-		// The single line that defeats alg:none and RS256-to-HS256
-		// confusion. Without it a token whose header says HS256 is verified
-		// with the RSA public key's bytes as an HMAC secret — and that public
-		// key is published at the JWKS endpoint.
+		// Pin the algorithm. Removing this line was measured: alg:none and
+		// HS256 confusion still fail, because the key function returns an
+		// *rsa.PublicKey and the library will not hand that to an HMAC
+		// verifier. What it does let through is substitution within the RSA
+		// family — RS384, RS512, PS256 — so this is what keeps the accepted
+		// algorithm the one actually intended, and the HMAC case is defence
+		// in depth from the library rather than from here.
 		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}),
 		jwt.WithIssuer(s.cfg.Issuer),
 		jwt.WithAudience(s.cfg.Audience),
 		jwt.WithExpirationRequired(),
+		// Without this the library validates exp and nbf against the wall
+		// clock while everything else here uses the injected one, so the two
+		// halves of verification could disagree — and an expiry test could
+		// only be written by sleeping.
+		jwt.WithTimeFunc(s.now),
 	)
 	if err != nil {
 		return nil, ErrInvalidToken

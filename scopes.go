@@ -104,3 +104,7 @@ func (s Scopes) Equal(other Scopes) bool {
 	}
 	return true
 }
+
+// sortStrings sorts in place. A tiny helper so the metadata document is
+// stable between restarts, which matters for its ETag.
+func sortStrings(values []string) { sort.Strings(values) }

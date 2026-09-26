@@ -102,3 +102,15 @@ type Store interface {
 	// Prune removes rows that expired before the given time.
 	Prune(ctx context.Context, before time.Time) (PruneResult, error)
 }
+
+// RefreshWriter is implemented by a store that can write a refresh token on
+// its own, outside a rotation.
+//
+// The authorization code grant needs it: the code's own transition has
+// already committed by the time the pair is written, so there is no rotation
+// to attach the new token to. It is a separate interface rather than a Store
+// method because only that one path needs it, and a store that cannot do it
+// should fail loudly rather than silently accept a token nobody can use.
+type RefreshWriter interface {
+	CreateRefreshToken(ctx Context, token *RefreshToken) error
+}

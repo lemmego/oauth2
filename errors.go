@@ -114,3 +114,8 @@ var (
 
 	errUnknownKey = errors.New("oauth2: unknown signing key")
 )
+
+// errStoreCannotWriteRefresh reports a store that does not implement
+// RefreshWriter, which the authorization code grant needs.
+var errStoreCannotWriteRefresh = errors.New(
+	"oauth2: this store cannot write a refresh token outside a rotation")
