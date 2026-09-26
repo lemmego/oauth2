@@ -99,49 +99,157 @@ const MigrationVersion = "20260101000000"
 
 // MigrationStub is the migration published into a project.
 //
-// Publishing it rather than creating the tables at boot is deliberate: the
-// schema is something an application owns. It can be read, edited, and rolled
-// back with every other migration, and it appears in schema_migrations where
-// an operator expects to find it.
+// The schema is spelled out here rather than delegated back to this package.
+// That is the whole point of publishing it: the file becomes the project's,
+// so a column can be added, a type changed, or a table dropped outright. A
+// stub that called SchemaStatements would look like ownership and give none
+// of it — changing anything would mean forking the package.
 //
-// It calls SchemaStatements rather than embedding the DDL, so the published
-// file cannot drift from the schema this package actually reads and writes,
-// and so it renders for whichever database the project migrates.
+// The cost is that this and SchemaStatements can drift.
+// TestPublishedMigrationMatchesTheSchema pins them together so the drift is
+// caught here rather than shipped, and after a project publishes the file the
+// two are meant to diverge.
+//
+// The form matches the migration a scaffolded project already has for its
+// users table, so it reads like something the project wrote.
 const MigrationStub = `package migrations
 
 import (
 	"database/sql"
 
 	"github.com/lemmego/migration"
-	"github.com/lemmego/oauth2"
 )
 
 func init() {
 	migration.GetMigrator().AddMigration(&migration.Migration{
-		Version: "` + MigrationVersion + `",
-		Up:      mig_` + MigrationVersion + `_create_oauth2_tables_up,
-		Down:    mig_` + MigrationVersion + `_create_oauth2_tables_down,
+		Version: "20260101000000",
+		Up:      mig_20260101000000_create_oauth2_tables_up,
+		Down:    mig_20260101000000_create_oauth2_tables_down,
 	})
 }
 
-func mig_` + MigrationVersion + `_create_oauth2_tables_up(tx *sql.Tx) error {
-	// The dialect comes from the migrator, so this one file serves sqlite,
-	// mysql and postgres. Statements are executed one at a time because an
-	// index is its own statement outside MySQL, and the MySQL driver refuses
-	// several at once unless the DSN opts in.
-	for _, statement := range oauth2.SchemaStatements(migration.GetMigrator().Dialect(), "") {
-		if _, err := tx.Exec(statement); err != nil {
-			return err
-		}
+// The OAuth2 server's tables. This file belongs to your project: change a
+// column, add one, or drop a table you do not need. Nothing in the oauth2
+// package reads it back, so an edit here is yours to keep.
+//
+// What the server does expect is that the columns it reads and writes exist
+// with compatible types. Removing oauth_device_codes disables the device
+// grant; removing a column the server writes will fail at runtime rather
+// than at migrate time.
+func mig_20260101000000_create_oauth2_tables_up(tx *sql.Tx) error {
+	if _, err := tx.Exec(migration.Create("oauth_clients", func(t *migration.Table) {
+		t.String("id", 64).Primary()
+		t.String("user_id", 64).Nullable()
+		t.String("name", 255)
+		t.String("secret", 64).Nullable()
+		t.Text("redirect_uris")
+		t.Text("grant_types")
+		t.Text("scopes").Nullable()
+		t.Boolean("confidential").Default(true)
+		t.Boolean("first_party").Default(false)
+		t.Boolean("revoked").Default(false)
+		t.DateTime("created_at", 6).Default(migration.CurrentTimestamp)
+		t.DateTime("updated_at", 6).Default(migration.CurrentTimestamp)
+		t.Index("user_id")
+	}).Build()); err != nil {
+		return err
 	}
+
+	if _, err := tx.Exec(migration.Create("oauth_auth_codes", func(t *migration.Table) {
+		t.String("id", 64).Primary()
+		t.String("user_id", 64)
+		t.String("client_id", 64)
+		t.Text("scopes")
+		t.Text("redirect_uri")
+		t.String("code_challenge", 128).Nullable()
+		t.String("code_challenge_method", 10).Nullable()
+		t.String("family_id", 64)
+		t.DateTime("expires_at", 6)
+		t.DateTime("consumed_at", 6).Nullable()
+		t.Boolean("revoked").Default(false)
+		t.DateTime("created_at", 6).Default(migration.CurrentTimestamp)
+		t.Index("client_id")
+		t.Index("expires_at")
+	}).Build()); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(migration.Create("oauth_access_tokens", func(t *migration.Table) {
+		t.String("id", 80).Primary()
+		t.String("user_id", 64).Nullable()
+		t.String("client_id", 64)
+		t.String("name", 255).Nullable()
+		t.Text("scopes")
+		t.String("family_id", 64)
+		t.Boolean("revoked").Default(false)
+		t.DateTime("expires_at", 6)
+		t.DateTime("created_at", 6).Default(migration.CurrentTimestamp)
+		t.DateTime("updated_at", 6).Default(migration.CurrentTimestamp)
+		t.Index("user_id")
+		t.Index("client_id")
+		t.Index("family_id")
+		t.Index("expires_at")
+	}).Build()); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(migration.Create("oauth_refresh_tokens", func(t *migration.Table) {
+		t.String("id", 64).Primary()
+		t.String("access_token_id", 80).Nullable()
+		t.String("client_id", 64)
+		t.String("user_id", 64).Nullable()
+		t.Text("scopes")
+		t.String("family_id", 64)
+		t.String("rotated_to", 64).Nullable()
+		t.Boolean("revoked").Default(false)
+		t.DateTime("expires_at", 6)
+		t.DateTime("created_at", 6).Default(migration.CurrentTimestamp)
+		t.Index("access_token_id")
+		t.Index("family_id")
+		t.Index("expires_at")
+	}).Build()); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(migration.Create("oauth_device_codes", func(t *migration.Table) {
+		t.String("id", 64).Primary()
+		t.String("user_code_hash", 64).Unique()
+		t.String("client_id", 64)
+		t.String("user_id", 64).Nullable()
+		t.Text("scopes")
+		t.String("family_id", 64)
+		t.Int("interval_seconds").Default(5)
+		t.Int("poll_count").Default(0)
+		t.DateTime("last_polled_at", 6).Nullable()
+		t.DateTime("approved_at", 6).Nullable()
+		t.DateTime("denied_at", 6).Nullable()
+		t.DateTime("consumed_at", 6).Nullable()
+		t.DateTime("expires_at", 6)
+		t.DateTime("created_at", 6).Default(migration.CurrentTimestamp)
+		t.Index("client_id")
+		t.Index("expires_at")
+	}).Build()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func mig_` + MigrationVersion + `_create_oauth2_tables_down(tx *sql.Tx) error {
-	for _, table := range oauth2.TableNames("") {
-		if _, err := tx.Exec("DROP TABLE IF EXISTS " + table); err != nil {
-			return err
-		}
+func mig_20260101000000_create_oauth2_tables_down(tx *sql.Tx) error {
+	if _, err := tx.Exec("DROP TABLE IF EXISTS oauth_device_codes"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DROP TABLE IF EXISTS oauth_refresh_tokens"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DROP TABLE IF EXISTS oauth_access_tokens"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DROP TABLE IF EXISTS oauth_auth_codes"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DROP TABLE IF EXISTS oauth_clients"); err != nil {
+		return err
 	}
 	return nil
 }
