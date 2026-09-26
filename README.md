@@ -29,27 +29,125 @@ the **password** grant, which RFC 9700 deprecates because it requires the
 client to handle the user's credentials directly. Passport dropped both too.
 They are absent rather than disabled, so no configuration can turn them on.
 
-## How it differs from Passport
+## Getting started
 
-**Five tables, not six.** Passport carries a separate
-`oauth_personal_access_clients` table only because its early versions had no
-grant-type column. Here a personal access client is one whose `grant_types`
-contains `personal_access`, which removes a join and a way to be inconsistent.
+```bash
+go get github.com/lemmego/oauth2
+```
 
-**Client secrets are SHA-256, not bcrypt.** A secret is 32 bytes from
-`crypto/rand`, so there is no dictionary to make expensive and nothing a slow
-hash would buy — while cost-10 bcrypt would add tens of milliseconds to every
-request at an unauthenticated endpoint, which is both a throughput problem and
-an amplification vector. bcrypt stays right for a user's password, which is
-human-chosen and low entropy.
+Register the provider in `bootstrap/providers.go`, **below** the database
+connector — providers run in order, and this one resolves the connection the
+connector registers:
 
-**The wildcard scope is first-party only.** Passport lets any client request
-`*`. A third-party application that can request everything makes the consent
-screen a lie.
+```go
+&ormconnector.Provider{},
+&oauth2.Provider{},
+```
 
-**`plain` PKCE is refused.** RFC 7636 makes `plain` the default when
-`code_challenge_method` is omitted, so an absent method is rejected too rather
-than treated as unset.
+Then:
+
+```bash
+lemmego run oauth:install                        # signing keys, and what to do next
+lemmego run publish --tags=oauth2-config,oauth2-migrations     # config and the migration
+go build ./...                                   # the migration must be compiled in
+lemmego run migrate up
+lemmego run oauth:client --name "My App" --redirect-uri https://app.example.com/cb
+```
+
+Step 3 is the one people miss: the migration was written by a running binary
+that does not contain it yet.
+
+### Commands
+
+| Command | Does |
+|---|---|
+| `oauth:install` | Generates signing keys and prints the remaining steps |
+| `oauth:keys` | Generates keys; `--rotate` retires the current one instead |
+| `oauth:client` | Registers a client; `--public`, `--personal`, `--client-credentials`, `--device` |
+| `oauth:purge` | Deletes expired rows; `--dry-run` to look first |
+| `oauth:routes` | Prints the mounted endpoints, the issuer and the active key |
+
+`oauth:keys` writes the private key with `O_EXCL`, so a second run fails
+rather than replacing it — replacing a signing key invalidates every access
+token in flight and every refresh token ever issued. `--rotate` is the
+supported way to change keys, and the retired key keeps verifying its own
+tokens until they expire.
+
+## Endpoints
+
+| Endpoint | Mounted as | Why |
+|---|---|---|
+| `{prefix}/token` | raw handler | no CSRF, no session, RFC 6749 error bodies |
+| `{prefix}/device/code` | raw handler | machine to machine |
+| `{prefix}/revoke` | raw handler | RFC 7009 |
+| `{prefix}/introspect` | raw handler | RFC 7662; no CORS, confidential clients only |
+| `/.well-known/jwks.json` | raw handler, at the root | public and cacheable, with a strong ETag |
+| `/.well-known/oauth-authorization-server` | raw handler, at the root | RFC 8414 requires the root |
+| `{prefix}/authorize` | typed route | browser flow: CSRF, session, consent |
+| `{prefix}/device` | typed route | the user-code screen |
+
+The split is the design rather than a workaround. A raw handler never enters
+the framework's `Handler` pipeline, so CSRF verification never sees the token
+endpoint — correct, and correct *by construction* rather than because a
+project remembered to add an exclusion pattern. A protocol endpoint whose
+correctness depends on someone editing `bootstrap/middleware.go` is a
+foot-gun.
+
+The cost, stated rather than hidden: a raw handler is not counted by the
+framework's in-flight request tracking, so a graceful shutdown will not wait
+for a token exchange. Those take milliseconds.
+
+The human-facing routes do want the pipeline, being first-party, cookie
+authenticated and browser driven.
+
+## Protecting your API
+
+```go
+r.Group("/api").UseBefore(oauth2Provider.Protect("orders:read"))
+```
+
+`Protect` sets both the `*Principal` and auth's own user key, so a handler
+already written against `auth.AuthUser` keeps working against a bearer token
+unchanged — and `auth` never learns this package exists, which keeps the
+dependency pointing one way. Supply `UserResolver` to have it hand over a
+real user row instead of the principal.
+
+## The consent screen
+
+The default is one self-contained HTML document: inline styles, no
+JavaScript, no external assets. Self-containment is what makes it work
+whatever the project's frontend, since a Templ or Inertia application has no
+Go template cache to render through and no page component for this route.
+
+Override it with `ConsentView` and `DeviceView`. An Inertia project must,
+because its pages live in a JavaScript bundle this package knows nothing
+about.
+
+The decision is rebuilt from the session, not from the posted body — a page
+that displayed `read` cannot post back `read write admin`. The form carries
+this package's own single-use nonce alongside the framework's CSRF token,
+because the REST preset installs no CSRF middleware at all.
+
+## Tokens
+
+Access tokens are RS256 JWTs following RFC 9068 (`typ: at+jwt`), whose `jti`
+is a row in `oauth_access_tokens`. That row is what makes revocation real: the
+signature proves the token was issued, and the row proves it still counts.
+
+The cost is honest — one RSA verification and one indexed primary-key read per
+authenticated request. `revocation` can be set to `cached` (which reopens a
+revocation window as long as its TTL) or `never` (under which revoking does
+nothing until the token expires), and the configuration comment says so in
+those words.
+
+The `kid` is the **RFC 7638 JWK thumbprint** rather than a name. The same key
+therefore has the same `kid` in every process with no state to keep in sync —
+and a `kid` is only ever a lookup into a map of keys already loaded, never a
+path or a filename, so `"kid": "../../etc/passwd"` resolves to nothing and is
+rejected before anything touches a filesystem.
+
+Rotation moves the active key aside; its public half stays in the ring and in
+the JWKS, so tokens it signed keep verifying until they expire.
 
 ## Persistence
 
@@ -76,27 +174,6 @@ count is the decision. Exposing `Get` and `Update` instead would let every
 caller re-implement that race, and one of them would get it wrong.
 
 An in-memory `Store` ships for tests and for trying the server out.
-
-## Tokens
-
-Access tokens are RS256 JWTs following RFC 9068 (`typ: at+jwt`), whose `jti`
-is a row in `oauth_access_tokens`. That row is what makes revocation real: the
-signature proves the token was issued, and the row proves it still counts.
-
-The cost is honest — one RSA verification and one indexed primary-key read per
-authenticated request. `revocation` can be set to `cached` (which reopens a
-revocation window as long as its TTL) or `never` (under which revoking does
-nothing until the token expires), and the configuration comment says so in
-those words.
-
-The `kid` is the **RFC 7638 JWK thumbprint** rather than a name. The same key
-therefore has the same `kid` in every process with no state to keep in sync —
-and a `kid` is only ever a lookup into a map of keys already loaded, never a
-path or a filename, so `"kid": "../../etc/passwd"` resolves to nothing and is
-rejected before anything touches a filesystem.
-
-Rotation moves the active key aside; its public half stays in the ring and in
-the JWKS, so tokens it signed keep verifying until they expire.
 
 ## The migration is yours
 
@@ -150,105 +227,6 @@ closed, and a JWKS carrying no private material.
 **This proves the listed attacks are blocked. It does not prove the absence of
 attacks** — that is the risk taken in hand-rolling a protocol implementation
 rather than using an audited one such as `ory/fosite`.
-
-## Endpoints
-
-| Endpoint | Mounted as | Why |
-|---|---|---|
-| `{prefix}/token` | raw handler | no CSRF, no session, RFC 6749 error bodies |
-| `{prefix}/device/code` | raw handler | machine to machine |
-| `{prefix}/revoke` | raw handler | RFC 7009 |
-| `{prefix}/introspect` | raw handler | RFC 7662; no CORS, confidential clients only |
-| `/.well-known/jwks.json` | raw handler, at the root | public and cacheable, with a strong ETag |
-| `/.well-known/oauth-authorization-server` | raw handler, at the root | RFC 8414 requires the root |
-| `{prefix}/authorize` | typed route | browser flow: CSRF, session, consent |
-| `{prefix}/device` | typed route | the user-code screen |
-
-The split is the design rather than a workaround. A raw handler never enters
-the framework's `Handler` pipeline, so CSRF verification never sees the token
-endpoint — correct, and correct *by construction* rather than because a
-project remembered to add an exclusion pattern. A protocol endpoint whose
-correctness depends on someone editing `bootstrap/middleware.go` is a
-foot-gun.
-
-The cost, stated rather than hidden: a raw handler is not counted by the
-framework's in-flight request tracking, so a graceful shutdown will not wait
-for a token exchange. Those take milliseconds.
-
-The human-facing routes do want the pipeline, being first-party, cookie
-authenticated and browser driven.
-
-## The consent screen
-
-The default is one self-contained HTML document: inline styles, no
-JavaScript, no external assets. Self-containment is what makes it work
-whatever the project's frontend, since a Templ or Inertia application has no
-Go template cache to render through and no page component for this route.
-
-Override it with `ConsentView` and `DeviceView`. An Inertia project must,
-because its pages live in a JavaScript bundle this package knows nothing
-about.
-
-The decision is rebuilt from the session, not from the posted body — a page
-that displayed `read` cannot post back `read write admin`. The form carries
-this package's own single-use nonce alongside the framework's CSRF token,
-because the REST preset installs no CSRF middleware at all.
-
-## Protecting your API
-
-```go
-r.Group("/api").UseBefore(oauth2Provider.Protect("orders:read"))
-```
-
-`Protect` sets both the `*Principal` and auth's own user key, so a handler
-already written against `auth.AuthUser` keeps working against a bearer token
-unchanged — and `auth` never learns this package exists, which keeps the
-dependency pointing one way. Supply `UserResolver` to have it hand over a
-real user row instead of the principal.
-
-## Getting started
-
-```bash
-go get github.com/lemmego/oauth2
-```
-
-Register the provider in `bootstrap/providers.go`, **below** the database
-connector — providers run in order, and this one resolves the connection the
-connector registers:
-
-```go
-&ormconnector.Provider{},
-&oauth2.Provider{},
-```
-
-Then:
-
-```bash
-lemmego run oauth:install                        # signing keys, and what to do next
-lemmego run publish --tags=oauth2-config,oauth2-migrations     # config and the migration
-go build ./...                                   # the migration must be compiled in
-lemmego run migrate up
-lemmego run oauth:client --name "My App" --redirect-uri https://app.example.com/cb
-```
-
-Step 3 is the one people miss: the migration was written by a running binary
-that does not contain it yet.
-
-### Commands
-
-| Command | Does |
-|---|---|
-| `oauth:install` | Generates signing keys and prints the remaining steps |
-| `oauth:keys` | Generates keys; `--rotate` retires the current one instead |
-| `oauth:client` | Registers a client; `--public`, `--personal`, `--client-credentials`, `--device` |
-| `oauth:purge` | Deletes expired rows; `--dry-run` to look first |
-| `oauth:routes` | Prints the mounted endpoints, the issuer and the active key |
-
-`oauth:keys` writes the private key with `O_EXCL`, so a second run fails
-rather than replacing it — replacing a signing key invalidates every access
-token in flight and every refresh token ever issued. `--rotate` is the
-supported way to change keys, and the retired key keeps verifying its own
-tokens until they expire.
 
 ## What is missing
 
