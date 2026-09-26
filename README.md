@@ -8,10 +8,10 @@ This is the server side. Signing in to *someone else's* provider — "log in
 with GitHub" — is the client side and is a different, much smaller thing this
 package does not do.
 
-> **Status: incomplete.** The store, schema, keys, all five grants, every HTTP
-> endpoint and the consent screen are implemented and tested. The `oauth:*`
-> commands are not written yet — including `oauth:keys`, so there is no
-> supported way to generate the signing keys a deployment needs. See
+> **Status: usable, undocumented.** Everything below works: it has been driven
+> end to end in a scaffolded project — install, publish, migrate, create a
+> client, issue a token over HTTP, introspect it, revoke it. What is missing is
+> documentation on lemmego.org and a tagged release. See
 > [What is missing](#what-is-missing).
 
 ## What it does
@@ -206,12 +206,55 @@ unchanged — and `auth` never learns this package exists, which keeps the
 dependency pointing one way. Supply `UserResolver` to have it hand over a
 real user row instead of the principal.
 
+## Getting started
+
+```bash
+go get github.com/lemmego/oauth2
+```
+
+Register the provider in `bootstrap/providers.go`, **below** the database
+connector — providers run in order, and this one resolves the connection the
+connector registers:
+
+```go
+&ormconnector.Provider{},
+&oauth2.Provider{},
+```
+
+Then:
+
+```bash
+lemmego run oauth:install                        # signing keys, and what to do next
+lemmego run publish --tags=config,migrations     # config and the migration
+go build ./...                                   # the migration must be compiled in
+lemmego run migrate up
+lemmego run oauth:client --name "My App" --redirect-uri https://app.example.com/cb
+```
+
+Step 3 is the one people miss: the migration was written by a running binary
+that does not contain it yet.
+
+### Commands
+
+| Command | Does |
+|---|---|
+| `oauth:install` | Generates signing keys and prints the remaining steps |
+| `oauth:keys` | Generates keys; `--rotate` retires the current one instead |
+| `oauth:client` | Registers a client; `--public`, `--personal`, `--client-credentials`, `--device` |
+| `oauth:purge` | Deletes expired rows; `--dry-run` to look first |
+| `oauth:routes` | Prints the mounted endpoints, the issuer and the active key |
+
+`oauth:keys` writes the private key with `O_EXCL`, so a second run fails
+rather than replacing it — replacing a signing key invalidates every access
+token in flight and every refresh token ever issued. `--rotate` is the
+supported way to change keys, and the retired key keeps verifying its own
+tokens until they expire.
+
 ## What is missing
 
-- The `oauth:install`, `oauth:client`, `oauth:keys` and `oauth:purge`
-  commands — including the one that generates the signing keys, so a
-  deployment currently has no supported way to create them.
 - Documentation on lemmego.org.
+- A tagged release. The module is not yet versioned, so `go get` resolves it
+  only from a branch.
 
 ## Licence
 
