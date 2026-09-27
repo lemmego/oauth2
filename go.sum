@@ -147,10 +147,10 @@ github.com/justinas/alice v1.2.0/go.mod h1:fN5HRH/reO/zrUflLfTN43t3vXvKzvZIENsNE
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/lemmego/api v0.1.38 h1:4Llboha5dNQakaCCcCSiEKXwO0F3W6ZnZecao3tWO2M=
-github.com/lemmego/api v0.1.38/go.mod h1:W/dO1orsrAI+YWE3XZuwZZyexYlzH2z3Bk/xSNqaEDY=
-github.com/lemmego/auth v0.1.10 h1:KIIlwOoCmdLjZ512OiZ4DOvkotEijgc0WDvJGUTZJN4=
-github.com/lemmego/auth v0.1.10/go.mod h1:Hee+92SRyIMS+t0xal7jKK+IF5LHMICAipPQddf+L2I=
+github.com/lemmego/api v0.1.40 h1:lT6Sk1NVXiThdW7JhEmMsQkkvaZ9V9JWKZpdmTIO8LA=
+github.com/lemmego/api v0.1.40/go.mod h1:W/dO1orsrAI+YWE3XZuwZZyexYlzH2z3Bk/xSNqaEDY=
+github.com/lemmego/auth v0.2.0 h1:O+5J5gAahhBw6mQdJSSXMbVQ8ieQrWuBJ4mgxJoHMfo=
+github.com/lemmego/auth v0.2.0/go.mod h1:5clX2oQqZZeELmTSY/JMZilT68A92DaucVDa0MpI2dQ=
 github.com/lemmego/fsys v0.1.0 h1:P4fpotnq62sOGHLiUwX0zWVz/X4HnNJY0XY+fQxNowE=
 github.com/lemmego/fsys v0.1.0/go.mod h1:0FnPMmhcUB48QaRQMNdee5HOQcbc+aqpQoG7UDd3X1M=
 github.com/lemmego/migration v0.1.20 h1:2Osh2NrYQqIOovuR5sydFp0p6IILYDZF4Vw4A3c9yEs=

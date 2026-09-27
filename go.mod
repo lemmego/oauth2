@@ -6,10 +6,11 @@ require (
 	github.com/glebarez/go-sqlite v1.22.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/lemmego/api v0.1.38
-	github.com/lemmego/auth v0.1.10
+	github.com/lemmego/api v0.1.40
+	github.com/lemmego/auth v0.2.0
 	github.com/lemmego/migration v0.1.20
 	github.com/lib/pq v1.10.9
+	github.com/spf13/cobra v1.8.1
 )
 
 require (
@@ -55,7 +56,6 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/romsar/gonertia/v3 v3.0.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
