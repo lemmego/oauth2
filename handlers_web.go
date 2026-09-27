@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/lemmego/api/app"
@@ -34,12 +33,11 @@ func (p *Provider) requireResourceOwner(c app.Context) error {
 		return p.redirectToLogin(c)
 	}
 
-	// Populates the context when it can; the error is not fatal here because
-	// the fallbacks below may still find a user.
-	_ = auth.Check(c)
-
-	for _, candidate := range []any{c.Get(auth.UserKey), c.Session(auth.UserKey)} {
-		if id, ok := subjectID(candidate); ok {
+	// auth consults the session and the token, and reports the subject it
+	// verified. Reading both shapes by hand is no longer necessary: there is
+	// one shape.
+	if err := auth.Check(c); err == nil {
+		if id, ok := auth.UserID(c); ok {
 			c.Set(ownerKey, id)
 			return c.Next()
 		}
@@ -55,64 +53,6 @@ func (p *Provider) redirectToLogin(c app.Context) error {
 	}
 	return c.SetStatus(http.StatusFound).
 		Redirect(login + "?redirect=" + url.QueryEscape(c.Request().URL.RequestURI()))
-}
-
-// subjectID reads a user id out of every shape the framework produces.
-//
-// With sessions the value is the application's own type, satisfying
-// auth.UserProvider. With DisableSession — the scaffold's default — it is a
-// map[string]any that auth.jwtUser decoded from the token's user claim, which
-// Login produced by JSON-marshalling the user. Supporting both is what lets
-// the consent screen work without the application changing its auth setup.
-func subjectID(candidate any) (string, bool) {
-	switch value := candidate.(type) {
-	case nil:
-		return "", false
-	case auth.UserProvider:
-		if id := value.GetID(); id != "" {
-			return id, true
-		}
-	case map[string]any:
-		for _, key := range []string{"id", "sub", "user_id", "ID"} {
-			if id, ok := scalarString(value[key]); ok {
-				// auth.Login writes sub as id|username, so the identifier is
-				// the part before the separator.
-				if key == "sub" {
-					id, _, _ = strings.Cut(id, "|")
-				}
-				if id != "" {
-					return id, true
-				}
-			}
-		}
-	case string:
-		if value != "" {
-			return value, true
-		}
-	case fmt.Stringer:
-		if id := value.String(); id != "" {
-			return id, true
-		}
-	}
-	return "", false
-}
-
-func scalarString(value any) (string, bool) {
-	switch typed := value.(type) {
-	case string:
-		return typed, typed != ""
-	case float64:
-		// Every JSON number decodes to float64, which is how a numeric id
-		// arrives from a token claim.
-		return strconv.FormatFloat(typed, 'f', -1, 64), true
-	case int:
-		return strconv.Itoa(typed), true
-	case int64:
-		return strconv.FormatInt(typed, 10), true
-	case uint64:
-		return strconv.FormatUint(typed, 10), true
-	}
-	return "", false
 }
 
 // showConsent renders the authorization screen.

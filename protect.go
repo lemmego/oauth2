@@ -11,21 +11,15 @@ import (
 // principalKey is where a verified token is put on the request context.
 const principalKey = "oauth:principal"
 
-// UserResolver loads the application's user for a token subject.
-//
-// This package cannot do it: auth.UserProvider is three getters with no
-// lookup method, and oauth2 has no opinion about what a user is or which
-// persistence holds it. Leave it nil and auth.AuthUser returns the
-// *Principal, which is enough for scope checks and anything keyed on the id.
-type UserResolver func(ctx Context, userID string) (any, error)
-
 // Protect returns middleware that requires a valid access token, and
 // optionally particular scopes.
 //
-// It sets both the principal and auth's own user key, so a handler already
-// written against auth.AuthUser keeps working against a bearer token without
-// being changed — and auth never learns that this package exists, which keeps
-// the dependency pointing one way.
+// It records the token's subject with auth, which then runs the application's
+// own loader — so a handler written against auth.UserAs receives the same
+// concrete type here as it does behind a session cookie. This package still
+// has no opinion about what a user is; it hands over an id, which is a
+// narrower coupling than passing an object, and auth never learns that this
+// package exists.
 func (p *Provider) Protect(scopes ...string) app.Handler {
 	required := newScopes(scopes)
 
@@ -57,16 +51,20 @@ func (p *Provider) Protect(scopes ...string) app.Handler {
 
 		c.Set(principalKey, principal)
 
-		if p.UserResolver != nil && principal.UserID != "" {
-			user, err := p.UserResolver(c.RequestContext(), principal.UserID)
-			if err == nil && user != nil {
-				c.Set(auth.UserKey, user)
-				return c.Next()
-			}
+		if principal.UserID != "" {
+			// auth loads the user from here; the handler downstream sees the
+			// application's own type.
+			auth.SetSubject(c, principal.UserID)
+			return c.Next()
 		}
-		// Without a resolver the principal itself stands in, so
-		// auth.AuthUser is never nil for an authenticated request.
-		c.Set(auth.UserKey, principal)
+
+		// A client-credentials token: a machine acting as itself, with no
+		// user behind it. Marking it authenticated is the truth. The old
+		// behaviour put the *Principal under auth's user key so that
+		// AuthUser was "never nil" — which falsified the one promise auth
+		// makes, and did it silently: UserAs returns false and the handler
+		// renders a logged-out page.
+		auth.SetAuthenticated(c)
 		return c.Next()
 	}
 }

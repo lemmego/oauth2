@@ -40,11 +40,6 @@ type Provider struct {
 	// visitor to the login route.
 	ResourceOwner func(c app.Context) (string, bool)
 
-	// UserResolver loads the application's user for a token subject, so a
-	// handler written against auth.AuthUser receives a real user rather than
-	// the token's principal. Optional.
-	UserResolver UserResolver
-
 	mu       sync.RWMutex
 	resolved *Config
 	store    Store
