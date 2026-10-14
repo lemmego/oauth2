@@ -122,9 +122,24 @@ func requireGo(t *testing.T) {
 func writeHarness(t *testing.T, root string) {
 	t.Helper()
 
-	repo, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatal(err)
+	// The published migration module by default, which is what a project
+	// publishing this stub actually resolves — and a replace onto the sibling
+	// checkout only when there is one.
+	//
+	// It used to always write that replace, computed as filepath.Abs("..") +
+	// "/migration", which assumes this module sits beside its siblings in the
+	// monorepo working tree. In a checkout of this repository alone — which is
+	// what CI does, because every module here is its own repository — the
+	// directory does not exist and the whole harness fails to resolve. The
+	// test passed for everyone who happened to have the monorepo and failed
+	// for everyone else, and this is the first CI run that has ever existed
+	// here to say so.
+	replace := ""
+	if repo, err := filepath.Abs(".."); err == nil {
+		sibling := filepath.Join(repo, "migration")
+		if _, err := os.Stat(filepath.Join(sibling, "go.mod")); err == nil {
+			replace = "\nreplace github.com/lemmego/migration => " + sibling + "\n"
+		}
 	}
 
 	write(t, filepath.Join(root, "go.mod"), `module stubcheck
@@ -133,11 +148,9 @@ go 1.27
 
 require (
 	github.com/glebarez/go-sqlite v1.22.0
-	github.com/lemmego/migration v0.1.20
+	github.com/lemmego/migration v0.1.24
 )
-
-replace github.com/lemmego/migration => `+filepath.Join(repo, "migration")+`
-`)
+`+replace)
 
 	write(t, filepath.Join(root, "main.go"), `package main
 
