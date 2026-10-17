@@ -6,9 +6,9 @@ require (
 	github.com/glebarez/go-sqlite v1.22.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/lemmego/api v0.6.0
-	github.com/lemmego/auth v0.6.0
-	github.com/lemmego/migration v0.1.24
+	github.com/lemmego/api v0.6.3
+	github.com/lemmego/auth v0.6.2
+	github.com/lemmego/migration v0.2.0
 	github.com/lib/pq v1.10.9
 	github.com/spf13/cobra v1.8.1
 )
@@ -19,7 +19,6 @@ require (
 	github.com/alexedwards/scs/v2 v2.8.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
