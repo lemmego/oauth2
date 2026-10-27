@@ -24,8 +24,8 @@ package does not do.
 | Device authorization | RFC 8628, for CLIs, TVs and headless devices. |
 | Personal access tokens | Long-lived tokens a user makes for themselves. |
 
-Not implemented, deliberately: the **implicit** grant, which is obsolete, and
-the **password** grant, which RFC 9700 deprecates because it requires the
+Two grants are not implemented: the **implicit** grant, which is obsolete,
+and the **password** grant, which RFC 9700 deprecates because it requires the
 client to handle the user's credentials directly. Passport dropped both too.
 They are absent rather than disabled, so no configuration can turn them on.
 
@@ -153,7 +153,7 @@ Access tokens are RS256 JWTs following RFC 9068 (`typ: at+jwt`), whose `jti`
 is a row in `oauth_access_tokens`. That row is what makes revocation real: the
 signature proves the token was issued, and the row proves it still counts.
 
-The cost is honest — one RSA verification and one indexed primary-key read per
+The cost is one RSA verification and one indexed primary-key read per
 authenticated request. `revocation` can be set to `cached` (which reopens a
 revocation window as long as its TTL) or `never` (under which revoking does
 nothing until the token expires), and the configuration comment says so in
