@@ -62,8 +62,8 @@ func errorf(code, description string) *Error {
 	return &Error{Code: code, Description: description}
 }
 
-// The store's sentinels. They are deliberately distinct from the protocol
-// errors above: a grant decides what a client is told, and the difference
+// The store's sentinels. Keep them distinct from the protocol errors above:
+// a grant decides what a client is told, and the difference
 // between "this code never existed" and "this code was already used" changes
 // what the server does even though the client is told the same thing.
 var (
@@ -106,7 +106,7 @@ var (
 var (
 	// ErrInvalidToken is what every verification failure reports.
 	//
-	// It is deliberately one error. Telling a caller whether a token was
+	// It is one error on purpose. Telling a caller whether a token was
 	// forged, expired, revoked or signed by an unknown key is an oracle, and
 	// nothing legitimate needs the distinction: the server's own logs carry
 	// the detail.

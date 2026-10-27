@@ -11,7 +11,8 @@ import (
 
 // postForm reads the request body as form parameters.
 //
-// It returns r.PostForm rather than r.Form deliberately. ParseForm merges the
+// It returns r.PostForm rather than r.Form, and the difference matters.
+// ParseForm merges the
 // URL query into r.Form, so a server reading that would accept client
 // credentials and authorization codes in a query string — where they land in
 // access logs, proxy logs and browser history.

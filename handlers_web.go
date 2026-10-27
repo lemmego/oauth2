@@ -33,9 +33,8 @@ func (p *Provider) requireResourceOwner(c app.Context) error {
 		return p.redirectToLogin(c)
 	}
 
-	// auth consults the session and the token, and reports the subject it
-	// verified. Reading both shapes by hand is no longer necessary: there is
-	// one shape.
+	// auth consults the session and the token and reports the subject it
+	// verified, so there is one shape to read rather than two.
 	if err := auth.Check(c); err == nil {
 		if id, ok := auth.UserID(c); ok {
 			c.Set(ownerKey, id)

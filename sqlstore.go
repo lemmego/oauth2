@@ -62,8 +62,8 @@ func NewSQLStore(conn db.Connection, opts ...StoreOption) (*SQLStore, error) {
 	return s, nil
 }
 
-// NewSQLStoreWithDB is for tests and for an application that opened its own
-// pool deliberately.
+// NewSQLStoreWithDB is for tests, and for an application that wants the store
+// on a pool it opened itself.
 func NewSQLStoreWithDB(pool *sql.DB, dialect string, opts ...StoreOption) (*SQLStore, error) {
 	return NewSQLStore(staticConn{pool: pool, dialect: db.Dialect(dialect)}, opts...)
 }
