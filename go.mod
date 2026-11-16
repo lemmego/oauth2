@@ -6,9 +6,9 @@ require (
 	github.com/glebarez/go-sqlite v1.22.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/lemmego/api v0.13.0
+	github.com/lemmego/api v0.14.0
 	github.com/lemmego/auth v0.6.2
-	github.com/lemmego/migration v0.2.0
+	github.com/lemmego/migration v0.6.0
 	github.com/lib/pq v1.10.9
 	github.com/spf13/cobra v1.8.1
 )
